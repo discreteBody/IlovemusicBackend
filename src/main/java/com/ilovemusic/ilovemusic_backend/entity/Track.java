@@ -25,7 +25,7 @@ public class Track {
     @Column(nullable = false)
     private String title;
 
-    @Column(nullable = false)
+    @Column
     private String artist;
 
     private String album;

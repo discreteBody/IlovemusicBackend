@@ -104,22 +104,27 @@ The server will start on `http://localhost:8080`
 
 ### Authentication
 
+- **POST** `/api/auth/register` - Register a new user with username/email/password
 - **POST** `/api/auth/login` - Login with username/password
 - **POST** `/api/auth/refresh-token` - Refresh JWT token
-- **GET** `/api/auth/spotify/callback` - Spotify OAuth callback
-- **GET** `/api/auth/youtube/callback` - YouTube OAuth callback
 - **POST** `/api/auth/logout` - Logout
+- **GET** `/api/auth/connections` - Check Spotify and YouTube connections
+- **GET** `/api/auth/spotify` - Get Spotify OAuth redirect URL
+- **GET** `/api/auth/spotify/callback` - Spotify OAuth callback
+- **GET** `/api/auth/youtube` - Get YouTube OAuth redirect URL
+- **GET** `/api/auth/youtube/callback` - YouTube OAuth callback
 
 ### Playlist Management
 
-- **POST** `/api/playlists` - Create a new playlist
-- **GET** `/api/playlists` - Get all playlists for current user
-- **GET** `/api/playlists/{playlistId}` - Get specific playlist
-- **PUT** `/api/playlists/{playlistId}` - Update playlist
-- **DELETE** `/api/playlists/{playlistId}` - Delete playlist
-- **POST** `/api/playlists/{playlistId}/tracks` - Add track to playlist
-- **GET** `/api/playlists/{playlistId}/tracks` - Get all tracks in playlist
-- **DELETE** `/api/playlists/{playlistId}/tracks/{trackId}` - Remove track from playlist
+- **POST** `/api/v1/playlists` - Create a new playlist
+- **GET** `/api/v1/playlists` - Get all playlists for current user (supports optional `platform` query parameter)
+- **GET** `/api/v1/playlists/{playlistId}` - Get specific playlist
+- **PUT** `/api/v1/playlists/{playlistId}` - Update playlist
+- **DELETE** `/api/v1/playlists/{playlistId}` - Delete playlist
+- **POST** `/api/v1/playlists/{playlistId}/tracks` - Add track to playlist
+- **GET** `/api/v1/playlists/{playlistId}/tracks` - Get all tracks in playlist
+- **DELETE** `/api/v1/playlists/{playlistId}/tracks/{trackId}` - Remove track from playlist
+- **POST** `/api/v1/playlists/export` - Export playlist between platforms (requires `playlistId`, `fromPlatform`, `toPlatform` query parameters)
 
 ## Core Components
 

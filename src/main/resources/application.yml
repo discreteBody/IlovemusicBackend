@@ -7,9 +7,6 @@ spring:
   application:
     name: ilovemusic-backend
 
-  autoconfigure:
-    exclude: ${OAUTH2_EXCLUDE:org.springframework.boot.autoconfigure.security.oauth2.client.servlet.OAuth2ClientAutoConfiguration}
-
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/ilovemusic}
     username: ${DATABASE_USERNAME:postgres}

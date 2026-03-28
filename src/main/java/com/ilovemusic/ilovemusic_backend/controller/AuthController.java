@@ -60,6 +60,12 @@ public class AuthController {
                             "VALIDATION_ERROR", 400));
         }
 
+        if (password.length() < 8) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Password must be at least 8 characters",
+                            "WEAK_PASSWORD", 400));
+        }
+
         if (userRepository.findByUsername(username).isPresent()) {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("Username already taken",
