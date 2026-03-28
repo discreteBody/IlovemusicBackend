@@ -1,0 +1,60 @@
+# New Relic Java Agent Configuration
+# Place this file at: src/main/resources/newrelic/newrelic.yml
+
+common: &default_settings
+  # Application name (required)
+  app_name: ilovemusic-backend
+
+  # License key from New Relic account (required - set via environment variable)
+  license_key: ${NEW_RELIC_LICENSE_KEY}
+
+  # Logging level
+  log_level: info
+
+  # Distributed Tracing
+  distributed_tracing:
+    enabled: true
+
+  # Real User Monitoring
+  rum:
+    enabled: false
+
+  # Application Performance Monitoring
+  transaction_tracer:
+    enabled: true
+    transaction_threshold: apdex_f
+    record_sql: obfuscated
+    log_sql: false
+
+  # Error reporting
+  error_collector:
+    enabled: true
+    capture_events: true
+    max_event_samples_stored: 100
+
+  # Thread profiling
+  thread_profiler:
+    enabled: true
+
+  # Custom parameters for better tracking
+  custom_parameters:
+    environment: ${ENVIRONMENT:local}
+    region: ${REGION:default}
+
+development:
+  <<: *default_settings
+  log_level: debug
+
+staging:
+  <<: *default_settings
+  log_level: info
+  transaction_tracer:
+    enabled: true
+
+production:
+  <<: *default_settings
+  log_level: warn
+  transaction_tracer:
+    enabled: true
+    transaction_threshold: 1.0
+

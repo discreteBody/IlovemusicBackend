@@ -1,0 +1,128 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /ilovemusic
+
+spring:
+  application:
+    name: ilovemusic-backend
+
+  autoconfigure:
+    exclude: ${OAUTH2_EXCLUDE:org.springframework.boot.autoconfigure.security.oauth2.client.servlet.OAuth2ClientAutoConfiguration}
+
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/ilovemusic}
+    username: ${DATABASE_USERNAME:postgres}
+    password: ${DATABASE_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  # Flyway Database Migration
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    baseline-version: "0"
+    baseline-description: "Initial baseline for existing schema"
+    validate-on-migrate: true
+    out-of-order: false
+    encoding: UTF-8
+    clean-disabled: true
+
+  jpa:
+    hibernate:
+      ddl-auto: validate  # Changed to 'validate' since migrations are handled by Flyway
+    show-sql: false
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        use_sql_comments: true
+        jdbc:
+          batch_size: 20
+          fetch_size: 50
+    defer-datasource-initialization: false
+
+  # JPA Auditing
+  data:
+    jpa:
+      repositories:
+        bootstrap-mode: deferred
+
+
+
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:ilovemusic-jwt-secret-key-2026-at-least-256-bits-minimum-length-required-for-HS256-algorithm-security}
+  expiration: 86400000
+
+# API Configuration
+api:
+  version: v1
+  base-path: /api/v1
+
+# Spotify Configuration
+spotify:
+  api:
+    base-url: https://api.spotify.com/v1
+    timeout: 10000
+
+# YouTube Configuration
+youtube:
+  api:
+    base-url: https://www.googleapis.com/youtube/v3
+    key: ${YOUTUBE_API_KEY:}
+    timeout: 10000
+
+# Application Configuration
+app:
+  base-url: http://localhost:8080
+  frontend-url: http://localhost:3000
+  name: ILoveMusic Backend
+
+# Actuator & Observability
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,readiness,liveness,metrics,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when-authorized
+  health:
+    livenessState:
+      enabled: true
+    readinessState:
+      enabled: true
+  metrics:
+    enable:
+      jvm: true
+      process: true
+      system: true
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    com.ilovemusic: DEBUG
+    org.springframework.web: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql: TRACE
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/ilovemusic.log
+    max-size: 10MB
+    max-history: 10
