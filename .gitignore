@@ -40,9 +40,11 @@ out/
 .env
 *.env
 
-# Logs
+# Logs - slf4j with logback rolling files
 logs/
 *.log
+*.log.*
+*.gz
 
 # OS files
 .DS_Store
