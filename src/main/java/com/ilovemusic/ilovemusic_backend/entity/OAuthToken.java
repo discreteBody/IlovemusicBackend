@@ -18,12 +18,12 @@ public class OAuthToken {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     @Column(nullable = false)
-    private String provider; // "spotify" or "youtube"
+    private String provider;
 
     @Column(nullable = false, columnDefinition = "TEXT")
     private String accessToken;
@@ -31,7 +31,7 @@ public class OAuthToken {
     @Column(columnDefinition = "TEXT")
     private String refreshToken;
 
-    private Long expiresIn;
+    private Long expiresIn;  // seconds until expiry
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -47,7 +47,6 @@ public class OAuthToken {
 
     @PreUpdate
     protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();  // ✅ critical for expiry check
     }
 }
-

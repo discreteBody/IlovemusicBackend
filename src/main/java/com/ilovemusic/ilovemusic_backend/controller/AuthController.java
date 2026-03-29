@@ -4,6 +4,7 @@ import com.ilovemusic.ilovemusic_backend.common.exception.UnauthorizedException;
 import com.ilovemusic.ilovemusic_backend.common.response.ApiResponse;
 import com.ilovemusic.ilovemusic_backend.entity.User;
 import com.ilovemusic.ilovemusic_backend.repository.UserRepository;
+import com.ilovemusic.ilovemusic_backend.service.SpotifyService;
 import com.ilovemusic.ilovemusic_backend.util.JwtUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,7 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
+import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -24,6 +25,7 @@ public class AuthController {
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final SpotifyService spotifyService;
 
     @Value("${spring.security.oauth2.client.registration.spotify.client-id:}")
     private String spotifyClientId;
@@ -39,10 +41,12 @@ public class AuthController {
 
     public AuthController(JwtUtil jwtUtil,
                           UserRepository userRepository,
-                          PasswordEncoder passwordEncoder) {
+                          PasswordEncoder passwordEncoder,
+                          SpotifyService spotifyService) {
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.spotifyService = spotifyService;
     }
 
     // ─── Register ─────────────────────────────────────────────────────────────
@@ -68,14 +72,12 @@ public class AuthController {
 
         if (userRepository.findByUsername(username).isPresent()) {
             return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("Username already taken",
-                            "USERNAME_TAKEN", 400));
+                    .body(ApiResponse.error("Username already taken", "USERNAME_TAKEN", 400));
         }
 
         if (userRepository.findByEmail(email).isPresent()) {
             return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("Email already registered",
-                            "EMAIL_TAKEN", 400));
+                    .body(ApiResponse.error("Email already registered", "EMAIL_TAKEN", 400));
         }
 
         User user = new User();
@@ -85,7 +87,6 @@ public class AuthController {
         userRepository.save(user);
 
         String token = jwtUtil.generateToken(username);
-
         Map<String, String> data = new HashMap<>();
         data.put("token", token);
         data.put("username", username);
@@ -118,7 +119,6 @@ public class AuthController {
         }
 
         String token = jwtUtil.generateToken(username);
-
         Map<String, String> data = new HashMap<>();
         data.put("token", token);
         data.put("username", username);
@@ -132,17 +132,10 @@ public class AuthController {
     public ResponseEntity<ApiResponse<Map<String, String>>> refreshToken(
             @RequestHeader("Authorization") String authHeader) {
 
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("Invalid Authorization header",
-                            "INVALID_HEADER", 400));
-        }
-
-        String token = authHeader.substring(7);
+        String token = authHeader.replace("Bearer ", "");
         if (!jwtUtil.validateToken(token)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error("Token is invalid or expired",
-                            "INVALID_TOKEN", 401));
+                    .body(ApiResponse.error("Token is invalid or expired", "INVALID_TOKEN", 401));
         }
 
         String username = jwtUtil.extractUsername(token);
@@ -155,7 +148,6 @@ public class AuthController {
     // ─── Logout ───────────────────────────────────────────────────────────────
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse<Void>> logout() {
-        // Stateless JWT — client just discards the token
         return ResponseEntity.ok(ApiResponse.success("Logout successful"));
     }
 
@@ -164,73 +156,112 @@ public class AuthController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> checkConnections(
             @RequestHeader("Authorization") String authHeader) {
 
-        String token = authHeader.replace("Bearer ", "");
-        String username = jwtUtil.extractUsername(token);
-
+        String username = jwtUtil.extractUsername(authHeader.replace("Bearer ", ""));
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UnauthorizedException("User not found"));
 
         Map<String, Object> data = new HashMap<>();
-        data.put("spotify_connected", user.getSpotifyId() != null);
+        data.put("spotify_connected", spotifyService.isConnected(user.getId()));
         data.put("youtube_connected", user.getYoutubeId() != null);
 
         return ResponseEntity.ok(ApiResponse.success(data, "Connections retrieved"));
     }
 
-    // ─── Spotify OAuth redirect URL ───────────────────────────────────────────
+    // ─── Spotify: Generate OAuth URL ─────────────────────────────────────────
+    // The JWT token is passed as state so we can identify the user in the callback
     @GetMapping("/spotify")
-    public ResponseEntity<ApiResponse<Map<String, String>>> spotifyRedirect() {
+    public ResponseEntity<ApiResponse<Map<String, String>>> spotifyRedirect(
+            @RequestHeader("Authorization") String authHeader) {
+
+        String jwtToken = authHeader.replace("Bearer ", "");
+
         String redirectUrl = "https://accounts.spotify.com/authorize"
                 + "?client_id=" + spotifyClientId
                 + "&response_type=code"
                 + "&redirect_uri=" + appBaseUrl + "/ilovemusic/api/auth/spotify/callback"
                 + "&scope=playlist-read-private%20playlist-read-collaborative"
-                + "%20playlist-modify-public%20playlist-modify-private";
+                + "%20playlist-modify-public%20playlist-modify-private"
+                + "&state=" + jwtToken;  // ✅ pass JWT as state
 
         return ResponseEntity.ok(
                 ApiResponse.success(Map.of("redirect_url", redirectUrl),
                         "Spotify OAuth URL generated"));
     }
 
-    // ─── Spotify OAuth callback ───────────────────────────────────────────────
+    // ─── Spotify: Real OAuth Callback ────────────────────────────────────────
     @GetMapping("/spotify/callback")
-    public ResponseEntity<ApiResponse<Map<String, String>>> spotifyCallback(
+    public ResponseEntity<Void> spotifyCallback(
             @RequestParam String code,
             @RequestParam(required = false) String state) {
 
         log.info("Spotify OAuth callback received");
-        // Full token exchange will be implemented in SpotifyService
-        return ResponseEntity.ok(
-                ApiResponse.success(
-                        Map.of("message", "Spotify callback received — token exchange coming soon"),
-                        "Callback received"));
+
+        if (state == null || !jwtUtil.validateToken(state)) {
+            log.error("Invalid state/JWT in Spotify callback");
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .location(URI.create(frontendUrl + "/dashboard?error=spotify_auth_failed"))
+                    .build();
+        }
+
+        try {
+            // Identify the user from JWT state
+            String username = jwtUtil.extractUsername(state);
+            User user = userRepository.findByUsername(username)
+                    .orElseThrow(() -> new UnauthorizedException("User not found"));
+
+            // Exchange the code for tokens and save to DB
+            spotifyService.exchangeCodeForTokens(user, code);
+
+            // Save Spotify user ID to the user record
+            String spotifyUserId = spotifyService.fetchSpotifyUserId(user);
+            user.setSpotifyId(spotifyUserId);
+            userRepository.save(user);
+
+            log.info("Spotify connected successfully for user {}", username);
+
+            // Redirect back to frontend with success
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .location(URI.create(frontendUrl + "/dashboard/playlists?connected=spotify"))
+                    .build();
+
+        } catch (Exception e) {
+            log.error("Spotify callback error: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .location(URI.create(frontendUrl + "/dashboard?error=spotify_auth_failed"))
+                    .build();
+        }
     }
 
-    // ─── YouTube OAuth redirect URL ───────────────────────────────────────────
+    // ─── YouTube: Generate OAuth URL ─────────────────────────────────────────
     @GetMapping("/youtube")
-    public ResponseEntity<ApiResponse<Map<String, String>>> youtubeRedirect() {
+    public ResponseEntity<ApiResponse<Map<String, String>>> youtubeRedirect(
+            @RequestHeader("Authorization") String authHeader) {
+
+        String jwtToken = authHeader.replace("Bearer ", "");
+
         String redirectUrl = "https://accounts.google.com/o/oauth2/v2/auth"
                 + "?client_id=" + googleClientId
                 + "&response_type=code"
                 + "&redirect_uri=" + appBaseUrl + "/ilovemusic/api/auth/youtube/callback"
-                + "&scope=https://www.googleapis.com/auth/youtube"
-                + "&access_type=offline&prompt=consent";
+                + "&scope=https://www.googleapis.com/auth/youtube.readonly"
+                + "%20https://www.googleapis.com/auth/youtube"
+                + "&access_type=offline&prompt=consent"
+                + "&state=" + jwtToken;
 
         return ResponseEntity.ok(
                 ApiResponse.success(Map.of("redirect_url", redirectUrl),
                         "YouTube OAuth URL generated"));
     }
 
-    // ─── YouTube OAuth callback ───────────────────────────────────────────────
+    // ─── YouTube: Callback (stub — next phase) ────────────────────────────────
     @GetMapping("/youtube/callback")
-    public ResponseEntity<ApiResponse<Map<String, String>>> youtubeCallback(
+    public ResponseEntity<Void> youtubeCallback(
             @RequestParam String code,
             @RequestParam(required = false) String state) {
 
-        log.info("YouTube OAuth callback received");
-        return ResponseEntity.ok(
-                ApiResponse.success(
-                        Map.of("message", "YouTube callback received — token exchange coming soon"),
-                        "Callback received"));
+        log.info("YouTube OAuth callback received — implementation coming next");
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .location(URI.create(frontendUrl + "/dashboard/playlists?connected=youtube"))
+                .build();
     }
 }

@@ -11,6 +11,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import com.ilovemusic.ilovemusic_backend.service.SpotifyService;
+import com.ilovemusic.ilovemusic_backend.entity.User;
 
 import java.util.List;
 import java.util.Map;
@@ -20,14 +22,43 @@ import java.util.Map;
 @Slf4j
 public class PlaylistController {
 
+    private final SpotifyService spotifyService;
     private final PlaylistService playlistService;
     private final UserRepository userRepository;   // ✅ Added
 
     public PlaylistController(PlaylistService playlistService,
-                              UserRepository userRepository) {
+                              UserRepository userRepository,
+                              SpotifyService spotifyService) {
         this.playlistService = playlistService;
         this.userRepository = userRepository;
+        this.spotifyService = spotifyService;
     }
+
+    // ─── NEW: Fetch live playlists from Spotify ───────────────────────────────
+    @GetMapping("/spotify")
+    public ResponseEntity<ApiResponse<List<PlaylistDTO>>> getSpotifyPlaylists(
+            Authentication authentication) {
+        User user = getUser(authentication);
+        List<PlaylistDTO> playlists = spotifyService.fetchUserPlaylists(user);
+        return ResponseEntity.ok(
+                ApiResponse.success(playlists,
+                        String.format("Found %d Spotify playlists", playlists.size()))
+        );
+    }
+
+    // ─── NEW: Fetch live tracks from a Spotify playlist ──────────────────────
+    @GetMapping("/spotify/{playlistId}/tracks")
+    public ResponseEntity<ApiResponse<List<TrackDTO>>> getSpotifyPlaylistTracks(
+            @PathVariable String playlistId,
+            Authentication authentication) {
+        User user = getUser(authentication);
+        List<TrackDTO> tracks = spotifyService.fetchPlaylistTracks(user, playlistId);
+        return ResponseEntity.ok(
+                ApiResponse.success(tracks,
+                        String.format("Found %d tracks", tracks.size()))
+        );
+    }
+
 
     @PostMapping
     public ResponseEntity<ApiResponse<PlaylistDTO>> createPlaylist(
@@ -133,11 +164,18 @@ public class PlaylistController {
         return ResponseEntity.ok(ApiResponse.success(result, "Export initiated successfully"));
     }
 
-    // ✅ Fixed — reads real user from DB using JWT username
+    // Update extractUserIdFromAuth to use getUser
     private Long extractUserIdFromAuth(Authentication authentication) {
+        return getUser(authentication).getId();
+    }
+
+
+
+    // ─── Helper ───────────────────────────────────────────────────────────────
+    private User getUser(Authentication authentication) {
         String username = authentication.getName();
         return userRepository.findByUsername(username)
-                .orElseThrow(() -> new UnauthorizedException("User not found: " + username))
-                .getId();
+                .orElseThrow(() -> new UnauthorizedException("User not found: " + username));
     }
+
 }
