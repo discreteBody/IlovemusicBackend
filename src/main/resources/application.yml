@@ -3,18 +3,19 @@ server:
   servlet:
     context-path: /ilovemusic
 
-
-
 spring:
+  config:
+    import: optional:file:.env[.properties]
   application:
     name: ilovemusic-backend
 
 
 
+
   datasource:
-    url: ${DATABASE_URL}
-    username: ${DATABASE_USERNAME}
-    password: ${DATABASE_PASSWORD}
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/ilovemusic}
+    username: ${DATABASE_USERNAME:postgres}
+    password: ${DATABASE_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
@@ -36,7 +37,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate  # Changed to 'validate' since migrations are handled by Flyway
+      ddl-auto: update  # Changed to 'validate' since migrations are handled by Flyway
     show-sql: false
     open-in-view: false
     properties:

@@ -176,10 +176,12 @@ public class AuthController {
 
         String jwtToken = authHeader.replace("Bearer ", "");
 
+        // Use 127.0.0.1 instead of localhost to match Spotify app configuration
+        String baseUrlForCallback = appBaseUrl.replace("localhost", "127.0.0.1");
         String redirectUrl = "https://accounts.spotify.com/authorize"
                 + "?client_id=" + spotifyClientId
                 + "&response_type=code"
-                + "&redirect_uri=" + appBaseUrl + "/ilovemusic/api/auth/spotify/callback"
+                + "&redirect_uri=" + baseUrlForCallback + "/api/auth/spotify/callback"
                 + "&scope=playlist-read-private%20playlist-read-collaborative"
                 + "%20playlist-modify-public%20playlist-modify-private"
                 + "&state=" + jwtToken;  // ✅ pass JWT as state
@@ -240,10 +242,12 @@ public class AuthController {
 
         String jwtToken = authHeader.replace("Bearer ", "");
 
+        // Use 127.0.0.1 instead of localhost to match OAuth app configuration
+        String baseUrlForCallback = appBaseUrl.replace("localhost", "127.0.0.1");
         String redirectUrl = "https://accounts.google.com/o/oauth2/v2/auth"
                 + "?client_id=" + googleClientId
                 + "&response_type=code"
-                + "&redirect_uri=" + appBaseUrl + "/ilovemusic/api/auth/youtube/callback"
+                + "&redirect_uri=" + baseUrlForCallback + "/api/auth/youtube/callback"
                 + "&scope=https://www.googleapis.com/auth/youtube.readonly"
                 + "%20https://www.googleapis.com/auth/youtube"
                 + "&access_type=offline&prompt=consent"
