@@ -37,7 +37,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update  # Changed to 'validate' since migrations are handled by Flyway
+      ddl-auto: validate  # Changed to 'validate' since migrations are handled by Flyway
     show-sql: false
     open-in-view: false
     properties:
