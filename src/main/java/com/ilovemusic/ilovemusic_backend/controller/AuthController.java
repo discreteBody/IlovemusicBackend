@@ -27,10 +27,11 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
     private final SpotifyService spotifyService;
 
-    @Value("${spring.security.oauth2.client.registration.spotify.client-id:}")
+    // ✅ With these
+    @Value("${spotify.client.id:}")
     private String spotifyClientId;
 
-    @Value("${spring.security.oauth2.client.registration.google.client-id:}")
+    @Value("${google.client.id:}")
     private String googleClientId;
 
     @Value("${app.base-url:http://localhost:8080}")

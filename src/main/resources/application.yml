@@ -3,14 +3,18 @@ server:
   servlet:
     context-path: /ilovemusic
 
+
+
 spring:
   application:
     name: ilovemusic-backend
 
+
+
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/ilovemusic}
-    username: ${DATABASE_USERNAME:postgres}
-    password: ${DATABASE_PASSWORD:postgres}
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
@@ -66,9 +70,16 @@ api:
 
 # Spotify Configuration
 spotify:
+  client:
+    id: ${SPOTIFY_CLIENT_ID:}
   api:
     base-url: https://api.spotify.com/v1
     timeout: 10000
+
+# Google Configuration (YouTube & OAuth)
+google:
+  client:
+    id: ${GOOGLE_CLIENT_ID:}
 
 # YouTube Configuration
 youtube:
@@ -88,7 +99,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,readiness,liveness,metrics,prometheus
+        include: env,health,readiness,liveness,metrics,prometheus
       base-path: /actuator
   endpoint:
     health:

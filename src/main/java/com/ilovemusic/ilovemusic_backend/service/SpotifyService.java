@@ -31,10 +31,11 @@ public class SpotifyService {
     private final OAuthTokenRepository oauthTokenRepository;
     private final WebClient.Builder webClientBuilder;
 
-    @Value("${spring.security.oauth2.client.registration.spotify.client-id:}")
+    // ✅ With these
+    @Value("${spotify.client.id:}")
     private String clientId;
 
-    @Value("${spring.security.oauth2.client.registration.spotify.client-secret:}")
+    @Value("${spotify.client.secret:}")
     private String clientSecret;
 
     @Value("${app.base-url:http://localhost:8080}")

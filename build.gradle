@@ -26,6 +26,8 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
+	implementation 'io.github.cdimascio:dotenv-java:3.2.0'
+
 	// Database
 	runtimeOnly 'org.postgresql:postgresql'
 
